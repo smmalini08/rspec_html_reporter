@@ -6,6 +6,7 @@ require 'fileutils'
 require 'rouge'
 require 'erb'
 require 'rbconfig'
+require 'yaml'
 
 I18n.enforce_available_locales = false
 
@@ -251,6 +252,12 @@ class RspecHtmlReporter < RSpec::Core::Formatters::BaseFormatter
             duration: @summary_duration
         }
 
+        FileUtils.mkdir_p 'results'
+
+        File.open("results/status.yml", "a+") do |file|
+          file.write(@all_groups.to_yaml.gsub(/---/, ''))
+        end
+
         template_file = File.read(File.dirname(__FILE__) + '/../templates/report.erb')
 
         f.puts ERB.new(template_file).result(binding)
@@ -259,8 +266,9 @@ class RspecHtmlReporter < RSpec::Core::Formatters::BaseFormatter
   end
 
   def close(notification)
+    @status = YAML.load_file(Dir.pwd + "/results/status.yml")
     File.open("#{REPORT_PATH}/overview.html", 'w') do |f|
-      @overview = @all_groups
+      @overview = @status
 
       @passed = @overview.values.map { |g| g[:passed].size }.inject(0) { |sum, i| sum + i }
       @failed = @overview.values.map { |g| g[:failed].size }.inject(0) { |sum, i| sum + i }
